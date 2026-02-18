@@ -1,0 +1,372 @@
+{
+  "_comment": "=== ตัวอย่างการทำงานของ Hierarchy Levels ===",
+  "_description": "เอกสารนี้แสดงให้เห็นว่า Level 0, 1, 2 คืออะไร และเชื่อมกันยังไง",
+  
+  "analogy": {
+    "title": "เปรียบเทียบกับหนังสือ",
+    "explanation": {
+      "level_0": "📖 เล่มหนังสือทั้งเล่ม (คู่มือจดทะเบียนโอนที่ดิน)",
+      "level_1": "📑 บทที่ 1, 2, 3... (หลักเกณฑ์, ขั้นตอน, เอกสาร, ค่าธรรมเนียม)",
+      "level_2": "📄 หน้าในแต่ละบท (ตาราง, รายการ, ย่อหน้า)"
+    }
+  },
+
+  "example_document_structure": {
+    "_description": "โครงสร้างเอกสารจริงของกรมที่ดิน",
+    
+    "original_document": {
+      "filename": "1.จดทะเบียนประเภทโอนอสังหาริมทรัพย์กรณีไม่ต้องประกาศ (N).txt",
+      "total_lines": 250,
+      "content_structure": [
+        "บรรทัด 1-5: หัวเรื่อง + บทนำ",
+        "บรรทัด 6-50: หลักเกณฑ์ (Section 1)",
+        "บรรทัด 51-100: ขั้นตอน (Section 2)",
+        "บรรทัด 101-150: รายการเอกสาร (Section 3)",
+        "บรรทัด 151-200: ค่าธรรมเนียม (Section 4)",
+        "บรรทัด 201-250: ช่องทางร้องเรียน (Section 5)"
+      ]
+    },
+
+    "how_we_chunk_it": {
+      "_description": "เราแบ่งเอกสารนี้เป็น 3 ระดับ",
+      
+      "level_0_document_root": {
+        "count": 1,
+        "description": "ทั้งเล่ม - ภาพรวมของเอกสาร",
+        "chunk_id": "doc_001_doc",
+        "text_preview": "บรรทัด 1-15 ประมาณ 500 ตัวอักษรแรก (บทนำ + สรุป)",
+        "purpose": "ให้ LLM เห็นภาพรวมว่าเอกสารนี้เกี่ยวกับอะไร"
+      },
+
+      "level_1_sections": {
+        "count": 5,
+        "description": "บทต่างๆ - หัวข้อใหญ่",
+        "chunks": [
+          {
+            "chunk_id": "doc_001_section_0",
+            "section_title": "หลักเกณฑ์",
+            "text_preview": "20 บรรทัดแรกของ section (สรุปหลักเกณฑ์)",
+            "purpose": "ให้ LLM เห็นว่ามี section นี้ และมีอะไรบ้าง"
+          },
+          {
+            "chunk_id": "doc_001_section_1",
+            "section_title": "ขั้นตอน",
+            "text_preview": "20 บรรทัดแรกของ section",
+            "purpose": "ภาพรวมขั้นตอน"
+          },
+          {
+            "chunk_id": "doc_001_section_2",
+            "section_title": "รายการเอกสาร",
+            "text_preview": "20 บรรทัดแรก",
+            "purpose": "ภาพรวมเอกสาร"
+          },
+          {
+            "chunk_id": "doc_001_section_3",
+            "section_title": "ค่าธรรมเนียม",
+            "text_preview": "20 บรรทัดแรก",
+            "purpose": "ภาพรวมค่าธรรมเนียม"
+          },
+          {
+            "chunk_id": "doc_001_section_4",
+            "section_title": "ช่องทางร้องเรียน",
+            "text_preview": "20 บรรทัดแรก",
+            "purpose": "ภาพรวมช่องทาง"
+          }
+        ]
+      },
+
+      "level_2_content": {
+        "count": "หลายสิบ chunks",
+        "description": "เนื้อหาจริงๆ - ตาราง, รายการ, ย่อหน้า",
+        "chunks": [
+          {
+            "chunk_id": "doc_001_section_0_0",
+            "parent": "doc_001_section_0 (หลักเกณฑ์)",
+            "content": "รายละเอียดหลักเกณฑ์ข้อ 1-3",
+            "type": "paragraph"
+          },
+          {
+            "chunk_id": "doc_001_section_0_1",
+            "parent": "doc_001_section_0 (หลักเกณฑ์)",
+            "content": "รายละเอียดหลักเกณฑ์ข้อ 4-6",
+            "type": "paragraph"
+          },
+          {
+            "chunk_id": "doc_001_section_3_0",
+            "parent": "doc_001_section_3 (ค่าธรรมเนียม)",
+            "content": "ตารางค่าธรรมเนียมทั้งหมด",
+            "type": "table"
+          }
+        ]
+      }
+    }
+  },
+
+  "real_example_with_links": {
+    "_comment": "=== ตัวอย่างจริงพร้อมการเชื่อมโยง ===",
+    
+    "level_0_document": {
+      "chunk_id": "doc_001_doc",
+      "hierarchy_level": 0,
+      "chunk_type": "document_summary",
+      "parent_chunk_id": null,
+      "child_chunk_ids": [
+        "doc_001_section_0",
+        "doc_001_section_1",
+        "doc_001_section_2",
+        "doc_001_section_3",
+        "doc_001_section_4"
+      ],
+      "file_name": "1.จดทะเบียนประเภทโอนอสังหาริมทรัพย์กรณีไม่ต้องประกาศ (N).txt",
+      "section_title": null,
+      "importance_score": 1.0,
+      "token_count": 180,
+      "text": "คู่มือสำหรับประชาชน\nการจดทะเบียนประเภทโอนอสังหาริมทรัพย์ กรณีไม่ต้องประกาศ\n\nหลักเกณฑ์\nการจดทะเบียนโอนอสังหาริมทรัพย์เป็นการโอนกรรมสิทธิ์...\n\n(ภาพรวม 500 ตัวอักษรแรก)",
+      
+      "_explanation": {
+        "what_is_this": "นี่คือ chunk แรกสุด เหมือนปกหนังสือ",
+        "why_important": "ให้ภาพรวมว่าเอกสารนี้เกี่ยวกับอะไร",
+        "when_retrieved": "ถ้า user ถามแบบคลุมๆ เช่น 'โอนที่ดินต้องทำยังไง?' ระบบจะดึง chunk นี้มาก่อน",
+        "children": "มี 5 children คือ 5 section ใหญ่ๆ"
+      }
+    },
+
+    "level_1_section_example": {
+      "chunk_id": "doc_001_section_3",
+      "hierarchy_level": 1,
+      "chunk_type": "section_fees",
+      "parent_chunk_id": "doc_001_doc",
+      "child_chunk_ids": [
+        "doc_001_section_3_0",
+        "doc_001_section_3_1"
+      ],
+      "file_name": "1.จดทะเบียนประเภทโอนอสังหาริมทรัพย์กรณีไม่ต้องประกาศ (N).txt",
+      "section_title": "ค่าธรรมเนียม",
+      "importance_score": 0.9,
+      "token_count": 220,
+      "text": "ค่าธรรมเนียม\n\nค่าธรรมเนียมการจดทะเบียนโอนอสังหาริมทรัพย์คำนวณจากราคาประเมินทุนทรัพย์...\n\n(20 บรรทัดแรกของ section)",
+      
+      "_explanation": {
+        "what_is_this": "นี่คือ Section Header - เหมือนชื่อบทในหนังสือ",
+        "why_important": "บอกว่ามี section ค่าธรรมเนียม และมีอะไรบ้างโดยรวม",
+        "when_retrieved": "ถ้า user ถาม 'ค่าธรรมเนียมคืออะไร?' จะดึง chunk นี้มาให้เห็นภาพรวม",
+        "parent": "parent คือเอกสารทั้งเล่ม (doc_001_doc)",
+        "children": "มี 2 children คือ (1) ตารางค่าธรรมเนียม (2) หมายเหตุพิเศษ"
+      }
+    },
+
+    "level_2_content_examples": [
+      {
+        "chunk_id": "doc_001_section_3_0",
+        "hierarchy_level": 2,
+        "chunk_type": "fees_table",
+        "parent_chunk_id": "doc_001_section_3",
+        "child_chunk_ids": [],
+        "file_name": "1.จดทะเบียนประเภทโอนอสังหาริมทรัพย์กรณีไม่ต้องประกาศ (N).txt",
+        "section_title": "ค่าธรรมเนียม",
+        "importance_score": 0.9,
+        "token_count": 450,
+        "has_table": true,
+        "text": "| ประเภทอสังหาริมทรัพย์ | ขนาดพื้นที่ | ค่าธรรมเนียม | หมายเหตุ |\n| ที่ดิน | น้อยกว่า 1 ไร่ | 500 บาท | ฟรีสำหรับการโอนครั้งแรก |\n| ที่ดิน | 1-10 ไร่ | 1,000 บาท | - |\n...",
+        
+        "_explanation": {
+          "what_is_this": "นี่คือเนื้อหาจริงๆ - ตารางค่าธรรมเนียมเต็ม",
+          "why_important": "มีข้อมูลละเอียดที่ user ต้องการ",
+          "when_retrieved": "ถ้า user ถาม 'ที่ดิน 5 ไร่ค่าธรรมเนียมเท่าไหร่?' จะดึง chunk นี้",
+          "parent": "parent คือ Section ค่าธรรมเนียม (doc_001_section_3)",
+          "children": "ไม่มี children เพราะนี่คือ leaf node แล้ว (ตารางไม่มีลูก)"
+        }
+      },
+      {
+        "chunk_id": "doc_001_section_3_1",
+        "hierarchy_level": 2,
+        "chunk_type": "fees_paragraph",
+        "parent_chunk_id": "doc_001_section_3",
+        "child_chunk_ids": [],
+        "file_name": "1.จดทะเบียนประเภทโอนอสังหาริมทรัพย์กรณีไม่ต้องประกาศ (N).txt",
+        "section_title": "ค่าธรรมเนียม",
+        "importance_score": 0.85,
+        "token_count": 320,
+        "text": "***หมายเหตุ:\n- ผู้สูงอายุ (60 ปีขึ้นไป) ได้รับส่วนลด 50%\n- คนพิการได้รับยกเว้นค่าธรรมเนียม\n- กรณีการโอนระหว่างบิดา มารดา บุตร ได้รับลดหย่อน 30%",
+        
+        "_explanation": {
+          "what_is_this": "เนื้อหาเสริม - หมายเหตุพิเศษของค่าธรรมเนียม",
+          "why_important": "มีข้อยกเว้นสำคัญที่ต้องบอก user",
+          "when_retrieved": "ถ้า user ถาม 'ผู้สูงอายุได้ส่วนลดมั้ย?' จะดึง chunk นี้",
+          "parent": "parent คือ Section ค่าธรรมเนียม (doc_001_section_3)",
+          "siblings": "มี sibling คือตารางค่าธรรมเนียม (doc_001_section_3_0)"
+        }
+      }
+    ]
+  },
+
+  "why_hierarchy_matters": {
+    "_comment": "=== ทำไมต้องมี Level? ===",
+    
+    "scenario_1_simple_question": {
+      "user_query": "ค่าธรรมเนียมที่ดิน 5 ไร่เท่าไหร่?",
+      "retrieval_process": {
+        "step_1": "Hybrid Search ดึง Level 2 chunk (ตาราง)",
+        "retrieved": "doc_001_section_3_0 (ตารางค่าธรรมเนียม)",
+        "step_2": "Context Expansion - ดึง parent และ siblings",
+        "parent_added": "doc_001_section_3 (Section Header: ค่าธรรมเนียม)",
+        "siblings_added": "doc_001_section_3_1 (หมายเหตุพิเศษ)",
+        "final_context": "ได้ทั้งตาราง + หมายเหตุ (ผู้สูงอายุลด 50%)",
+        "answer": "1,000 บาท (อยู่ในช่วง 1-10 ไร่) และถ้าเป็นผู้สูงอายุจะลด 50%"
+      }
+    },
+
+    "scenario_2_complex_question": {
+      "user_query": "จดทะเบียนโอนที่ดินต้องทำยังไง?",
+      "retrieval_process": {
+        "step_1": "Hybrid Search ดึง Level 0 (Document Summary)",
+        "retrieved": "doc_001_doc (ภาพรวมเอกสาร)",
+        "step_2": "Context Expansion - ดึง children (ทุก section)",
+        "children_added": [
+          "doc_001_section_0 (หลักเกณฑ์)",
+          "doc_001_section_1 (ขั้นตอน)",
+          "doc_001_section_2 (รายการเอกสาร)",
+          "doc_001_section_3 (ค่าธรรมเนียม)"
+        ],
+        "final_context": "ได้ภาพรวมครบทั้งเอกสาร",
+        "answer": "มี 4 ส่วนหลัก: 1) หลักเกณฑ์... 2) ขั้นตอน 5 ขั้น... 3) เอกสาร 6 อย่าง... 4) ค่าธรรมเนียม..."
+      }
+    },
+
+    "scenario_3_multi_hop": {
+      "user_query": "ต้องใช้เอกสารอะไร และเสียค่าธรรมเนียมเท่าไหร่?",
+      "retrieval_process": {
+        "step_1": "Hybrid Search ดึง 2 sections (Level 1)",
+        "retrieved": [
+          "doc_001_section_2 (Section: รายการเอกสาร)",
+          "doc_001_section_3 (Section: ค่าธรรมเนียม)"
+        ],
+        "step_2": "Context Expansion - ดึง children ของทั้ง 2 sections",
+        "children_of_section_2": [
+          "doc_001_section_2_0 (รายการเอกสาร 1-3)",
+          "doc_001_section_2_1 (รายการเอกสาร 4-6)"
+        ],
+        "children_of_section_3": [
+          "doc_001_section_3_0 (ตารางค่าธรรมเนียม)",
+          "doc_001_section_3_1 (หมายเหตุพิเศษ)"
+        ],
+        "final_context": "ได้ทั้งเอกสารครบ + ค่าธรรมเนียมครบ",
+        "answer": "เอกสาร: 1) บัตรประชาชน 2) โฉนด... ค่าธรรมเนียม: 500-5,000 บาทขึ้นกับขนาด"
+      }
+    }
+  },
+
+  "visual_tree_structure": {
+    "_comment": "=== โครงสร้างแบบต้นไม้ ===",
+    "tree": {
+      "doc_001_doc (Level 0)": {
+        "description": "📖 เอกสารทั้งเล่ม",
+        "children": {
+          "doc_001_section_0 (Level 1)": {
+            "description": "📑 Section: หลักเกณฑ์",
+            "children": {
+              "doc_001_section_0_0 (Level 2)": "📄 หลักเกณฑ์ข้อ 1-3",
+              "doc_001_section_0_1 (Level 2)": "📄 หลักเกณฑ์ข้อ 4-6"
+            }
+          },
+          "doc_001_section_1 (Level 1)": {
+            "description": "📑 Section: ขั้นตอน",
+            "children": {
+              "doc_001_section_1_0 (Level 2)": "📄 ขั้นตอนที่ 1-3",
+              "doc_001_section_1_1 (Level 2)": "📄 ขั้นตอนที่ 4-5"
+            }
+          },
+          "doc_001_section_2 (Level 1)": {
+            "description": "📑 Section: รายการเอกสาร",
+            "children": {
+              "doc_001_section_2_0 (Level 2)": "📄 เอกสารบุคคลธรรมดา",
+              "doc_001_section_2_1 (Level 2)": "📄 เอกสารนิติบุคคล"
+            }
+          },
+          "doc_001_section_3 (Level 1)": {
+            "description": "📑 Section: ค่าธรรมเนียม",
+            "children": {
+              "doc_001_section_3_0 (Level 2)": "📊 ตารางค่าธรรมเนียม",
+              "doc_001_section_3_1 (Level 2)": "📄 หมายเหตุพิเศษ"
+            }
+          }
+        }
+      }
+    }
+  },
+
+  "comparison_with_without_hierarchy": {
+    "_comment": "=== เปรียบเทียบมี Level vs ไม่มี Level ===",
+    
+    "without_hierarchy": {
+      "chunking_method": "Fixed-size 500 tokens แบบเดิม",
+      "result": [
+        {
+          "chunk_1": "หัวเรื่อง + หลักเกณฑ์บางส่วน",
+          "problem": "ไม่รู้ว่าเป็นส่วนไหนของเอกสาร"
+        },
+        {
+          "chunk_2": "หลักเกณฑ์ต่อ + ขั้นตอนบางส่วน",
+          "problem": "ตัดกลาง section!"
+        },
+        {
+          "chunk_3": "ตารางค่าธรรมเนียม (ครึ่งแรก)",
+          "problem": "ตารางไม่ครบ!"
+        },
+        {
+          "chunk_4": "ตารางค่าธรรมเนียม (ครึ่งหลัง)",
+          "problem": "ไม่มี header ตาราง!"
+        }
+      ],
+      "issues": [
+        "❌ ไม่รู้ context (อยู่ส่วนไหน)",
+        "❌ ตารางไม่ครบ",
+        "❌ ไม่สามารถขยาย context ได้",
+        "❌ ต้อง retrieve หลาย chunk"
+      ]
+    },
+
+    "with_hierarchy": {
+      "chunking_method": "Section-aware + 3 levels",
+      "result": {
+        "level_0": "1 chunk - ภาพรวมเอกสาร",
+        "level_1": "5 chunks - แต่ละ section",
+        "level_2": "20+ chunks - เนื้อหาละเอียด (ตาราง, รายการ, ย่อหน้า)"
+      },
+      "benefits": [
+        "✅ รู้ context เสมอ (มี section_title)",
+        "✅ ตารางครบทั้งก้อน",
+        "✅ ขยาย context ได้ (parent → children)",
+        "✅ Retrieve แค่ 1-2 chunks แต่ได้ข้อมูลครบ"
+      ]
+    }
+  },
+
+  "key_takeaways": {
+    "level_0": {
+      "description": "Document Root - ทั้งเล่ม",
+      "count": "1 chunk ต่อ 1 เอกสาร",
+      "purpose": "ภาพรวม + สารบัญ",
+      "when_used": "User ถามแบบคลุมๆ"
+    },
+    "level_1": {
+      "description": "Section Headers - บทต่างๆ",
+      "count": "5-10 chunks ต่อเอกสาร",
+      "purpose": "ภาพรวมแต่ละ section",
+      "when_used": "User ถามเกี่ยวกับหัวข้อเฉพาะ"
+    },
+    "level_2": {
+      "description": "Content - เนื้อหาจริง",
+      "count": "20-50 chunks ต่อเอกสาร",
+      "purpose": "ข้อมูลละเอียด",
+      "when_used": "User ถามคำถามเฉพาะเจาะจง"
+    },
+    "magic": {
+      "title": "🎯 ความมหัศจรรย์ของ Hierarchy",
+      "point_1": "Retrieve 1 chunk (Level 2) → ได้ parent (Level 1) → ได้ siblings → ข้อมูลครบ!",
+      "point_2": "Retrieve 1 chunk (Level 1) → ได้ children (Level 2) → รายละเอียดทั้งหมด!",
+      "point_3": "Retrieve 1 chunk (Level 0) → ได้ children (Level 1) → ภาพรวมทุก section!",
+      "result": "ระบบฉลาด ตอบได้ครบถ้วน แม่นยำ!"
+    }
+  }
+}

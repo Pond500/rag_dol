@@ -1,0 +1,364 @@
+{
+  "_title": "🎬 ตัวอย่างการ Retrieve แบบ Interactive - Step by Step",
+  "_description": "แสดง flow การทำงานจริงๆ ตั้งแต่ user ถามจนได้คำตอบ",
+
+  "scenario_1_simple_retrieval": {
+    "title": "📌 Scenario 1: คำถามง่ายๆ",
+    "user_query": "ค่าธรรมเนียมที่ดิน 5 ไร่เท่าไหร่?",
+    
+    "step_1_hybrid_search": {
+      "action": "🔍 Hybrid Search (BM25 + Vector)",
+      "bm25_keywords": ["ค่าธรรมเนียม", "ที่ดิน", "ไร่"],
+      "vector_semantic": ["ราคา", "พื้นที่", "ค่าใช้จ่าย"],
+      
+      "top_5_candidates": [
+        {
+          "rank": 1,
+          "chunk_id": "doc_001_section_3_0",
+          "chunk_type": "fees_table",
+          "hierarchy_level": 2,
+          "section_title": "ค่าธรรมเนียม",
+          "hybrid_score": 0.92,
+          "text_preview": "| ที่ดิน | 1-10 ไร่ | 1,000 บาท |..."
+        },
+        {
+          "rank": 2,
+          "chunk_id": "doc_001_section_3",
+          "chunk_type": "section_fees",
+          "hierarchy_level": 1,
+          "section_title": "ค่าธรรมเนียม",
+          "hybrid_score": 0.85,
+          "text_preview": "ค่าธรรมเนียม\nคำนวณจากราคาประเมิน..."
+        },
+        {
+          "rank": 3,
+          "chunk_id": "doc_001_section_3_1",
+          "chunk_type": "fees_paragraph",
+          "hierarchy_level": 2,
+          "section_title": "ค่าธรรมเนียม",
+          "hybrid_score": 0.78,
+          "text_preview": "***หมายเหตุ: ผู้สูงอายุ ลด 50%..."
+        }
+      ]
+    },
+
+    "step_2_reranking": {
+      "action": "🎯 Rerank (BGE-reranker-v2-m3)",
+      "model": "Cross-encoder คำนวณ relevance ใหม่",
+      
+      "reranked_top_3": [
+        {
+          "rank": 1,
+          "chunk_id": "doc_001_section_3_0",
+          "rerank_score": 0.95,
+          "why_top": "มีตารางค่าธรรมเนียมที่ user ต้องการ"
+        },
+        {
+          "rank": 2,
+          "chunk_id": "doc_001_section_3_1",
+          "rerank_score": 0.88,
+          "why_top": "มีหมายเหตุเสริม (ผู้สูงอายุลด 50%)"
+        },
+        {
+          "rank": 3,
+          "chunk_id": "doc_001_section_3",
+          "rerank_score": 0.82,
+          "why_top": "Section header ให้ context"
+        }
+      ]
+    },
+
+    "step_3_context_expansion": {
+      "action": "🔗 Context Expansion (ใช้ Hierarchy)",
+      
+      "top_chunk": {
+        "chunk_id": "doc_001_section_3_0",
+        "hierarchy_level": 2,
+        "parent_chunk_id": "doc_001_section_3",
+        "child_chunk_ids": [],
+        "text": "| ที่ดิน | น้อยกว่า 1 ไร่ | 500 บาท |\n| ที่ดิน | 1-10 ไร่ | 1,000 บาท |\n| ที่ดิน | มากกว่า 10 ไร่ | 5,000 บาท |"
+      },
+
+      "fetch_parent": {
+        "chunk_id": "doc_001_section_3",
+        "hierarchy_level": 1,
+        "text": "ค่าธรรมเนียม\n\nค่าธรรมเนียมการจดทะเบียนคำนวณจากราคาประเมินทุนทรัพย์...",
+        "why_add": "ให้ context ว่านี่คือส่วนค่าธรรมเนียม"
+      },
+
+      "fetch_siblings": {
+        "sibling_1": {
+          "chunk_id": "doc_001_section_3_1",
+          "text": "***หมายเหตุ:\n- ผู้สูงอายุ (60+) ลด 50%\n- คนพิการ ฟรี\n- โอนระหว่างญาติสายตรง ลด 30%",
+          "why_add": "มีข้อมูลเสริมสำคัญ"
+        }
+      },
+
+      "final_context": {
+        "assembled_text": "ค่าธรรมเนียม (Section)\n\nตารางค่าธรรมเนียม:\n| ที่ดิน | น้อยกว่า 1 ไร่ | 500 บาท |\n| ที่ดิน | 1-10 ไร่ | 1,000 บาท |\n| ที่ดิน | มากกว่า 10 ไร่ | 5,000 บาท |\n\n***หมายเหตุ:\n- ผู้สูงอายุ (60+) ลด 50%\n- คนพิการ ฟรี\n- โอนระหว่างญาติสายตรง ลด 30%",
+        "total_chunks_used": 3,
+        "hierarchy_magic": "✨ Retrieve 1 chunk แต่ได้ 3 chunks (parent + self + sibling)!"
+      }
+    },
+
+    "step_4_llm_generation": {
+      "action": "🤖 LLM Generate Answer",
+      "input_context": "Context จาก step 3",
+      "llm_answer": "ค่าธรรมเนียมการจดทะเบียนโอนที่ดิน 5 ไร่ คือ **1,000 บาท** (อยู่ในช่วง 1-10 ไร่)\n\n***ข้อมูลเพิ่มเติม:\n- หากท่านเป็นผู้สูงอายุ (60 ปีขึ้นไป) จะได้รับส่วนลด 50% เหลือเพียง 500 บาท\n- หากเป็นคนพิการ จะได้รับยกเว้นค่าธรรมเนียม (ฟรี)\n- หากเป็นการโอนระหว่างบิดา มารดา บุตร จะได้รับลดหย่อน 30%\n\nที่มา: คู่มือปชช/1.จดทะเบียนโอน.txt - ส่วน: ค่าธรรมเนียม",
+      "why_accurate": "เพราะได้ context ครบ (ตาราง + หมายเหตุ + section header)"
+    }
+  },
+
+  "scenario_2_complex_multi_section": {
+    "title": "📌 Scenario 2: คำถามซับซ้อน (หลาย section)",
+    "user_query": "จดทะเบียนโอนที่ดินต้องใช้เอกสารอะไร และค่าใช้จ่ายเท่าไหร่?",
+    
+    "step_1_hybrid_search": {
+      "action": "🔍 Hybrid Search",
+      "top_5_candidates": [
+        {
+          "rank": 1,
+          "chunk_id": "doc_001_section_2",
+          "chunk_type": "section_documents",
+          "hierarchy_level": 1,
+          "section_title": "รายการเอกสาร",
+          "hybrid_score": 0.89
+        },
+        {
+          "rank": 2,
+          "chunk_id": "doc_001_section_3",
+          "chunk_type": "section_fees",
+          "hierarchy_level": 1,
+          "section_title": "ค่าธรรมเนียม",
+          "hybrid_score": 0.87
+        },
+        {
+          "rank": 3,
+          "chunk_id": "doc_001_section_2_0",
+          "chunk_type": "documents_list",
+          "hierarchy_level": 2,
+          "section_title": "รายการเอกสาร",
+          "hybrid_score": 0.85
+        }
+      ]
+    },
+
+    "step_2_reranking": {
+      "reranked_top_3": [
+        {
+          "rank": 1,
+          "chunk_id": "doc_001_section_2",
+          "rerank_score": 0.94,
+          "why_top": "Section เอกสาร ตรงกับคำถาม 'เอกสารอะไร'"
+        },
+        {
+          "rank": 2,
+          "chunk_id": "doc_001_section_3",
+          "rerank_score": 0.91,
+          "why_top": "Section ค่าธรรมเนียม ตรงกับ 'ค่าใช้จ่าย'"
+        },
+        {
+          "rank": 3,
+          "chunk_id": "doc_001_section_2_0",
+          "rerank_score": 0.86
+        }
+      ]
+    },
+
+    "step_3_context_expansion": {
+      "action": "🔗 Multi-Section Expansion",
+      
+      "section_1_documents": {
+        "parent": {
+          "chunk_id": "doc_001_section_2",
+          "text": "รายการเอกสาร (Section Header)"
+        },
+        "children": [
+          {
+            "chunk_id": "doc_001_section_2_0",
+            "text": "เอกสารบุคคลธรรมดา:\n1. บัตรประชาชน\n2. ทะเบียนบ้าน\n3. โฉนดที่ดิน"
+          },
+          {
+            "chunk_id": "doc_001_section_2_1",
+            "text": "เอกสารเพิ่มเติม:\n4. หนังสือมอบอำนาจ\n5. ใบเสร็จภาษี\n6. หนังสือยินยอม (ถ้ามีจำนอง)"
+          }
+        ]
+      },
+
+      "section_2_fees": {
+        "parent": {
+          "chunk_id": "doc_001_section_3",
+          "text": "ค่าธรรมเนียม (Section Header)"
+        },
+        "children": [
+          {
+            "chunk_id": "doc_001_section_3_0",
+            "text": "ตารางค่าธรรมเนียมเต็ม"
+          },
+          {
+            "chunk_id": "doc_001_section_3_1",
+            "text": "หมายเหตุพิเศษ (ผู้สูงอายุ, คนพิการ)"
+          }
+        ]
+      },
+
+      "final_context": {
+        "total_chunks": 6,
+        "hierarchy_magic": "✨ Retrieve 2 sections (Level 1) → ดึง children (Level 2) → ได้ครบ 2 หัวข้อ!",
+        "coverage": "100% - ตอบได้ทั้งเอกสาร + ค่าธรรมเนียม"
+      }
+    },
+
+    "step_4_llm_generation": {
+      "llm_answer": "การจดทะเบียนโอนที่ดินต้องเตรียมเอกสารดังนี้:\n\n**เอกสารหลัก:**\n1. บัตรประชาชน (ฉบับจริง + สำเนา)\n2. ทะเบียนบ้าน (ฉบับจริง + สำเนา)\n3. โฉนดที่ดิน หรือ น.ส.3 (ฉบับจริง)\n\n**เอกสารเพิ่มเติม:**\n4. หนังสือมอบอำนาจ (ถ้าไม่มาด้วยตนเอง)\n5. ใบเสร็จรับเงินชำระภาษีบำรุงท้องที่\n6. หนังสือยินยอมจากเจ้าหนี้จำนอง (ถ้ามีภาระ)\n\n**ค่าใช้จ่าย:**\n- ที่ดินน้อยกว่า 1 ไร่: 500 บาท\n- ที่ดิน 1-10 ไร่: 1,000 บาท\n- ที่ดินมากกว่า 10 ไร่: 5,000 บาท\n\n**ส่วนลด:**\n- ผู้สูงอายุ 60+ ได้ส่วนลด 50%\n- คนพิการ ฟรี\n\nที่มา: คู่มือปชช/1.จดทะเบียนโอน.txt",
+      "why_complete": "ได้ข้อมูลครบ 2 หัวข้อ เพราะ hierarchy ช่วยขยาย context!"
+    }
+  },
+
+  "scenario_3_vague_question": {
+    "title": "📌 Scenario 3: คำถามคลุมเครือ",
+    "user_query": "โอนที่ดินต้องทำยังไง?",
+    
+    "step_1_hybrid_search": {
+      "action": "🔍 Hybrid Search",
+      "note": "คำถามคลุม → ระบบดึง Level 0 (Document Summary)",
+      "top_3_candidates": [
+        {
+          "rank": 1,
+          "chunk_id": "doc_001_doc",
+          "chunk_type": "document_summary",
+          "hierarchy_level": 0,
+          "hybrid_score": 0.88,
+          "why_relevant": "มีคำว่า 'โอนที่ดิน' ในหัวเรื่อง"
+        },
+        {
+          "rank": 2,
+          "chunk_id": "doc_001_section_1",
+          "chunk_type": "section_steps",
+          "hierarchy_level": 1,
+          "section_title": "ขั้นตอน",
+          "hybrid_score": 0.85
+        }
+      ]
+    },
+
+    "step_2_context_expansion": {
+      "action": "🔗 Expand from Document Root",
+      
+      "document_root": {
+        "chunk_id": "doc_001_doc",
+        "hierarchy_level": 0,
+        "child_chunk_ids": [
+          "doc_001_section_0",
+          "doc_001_section_1",
+          "doc_001_section_2",
+          "doc_001_section_3",
+          "doc_001_section_4"
+        ]
+      },
+
+      "fetch_all_sections": [
+        {
+          "chunk_id": "doc_001_section_0",
+          "section_title": "หลักเกณฑ์",
+          "summary": "ต้องเป็นเจ้าของ, ไม่มีภาระ, ชำระภาษีครบ"
+        },
+        {
+          "chunk_id": "doc_001_section_1",
+          "section_title": "ขั้นตอน",
+          "summary": "มี 5 ขั้นตอน: จองคิว → ยื่นคำขอ → ตรวจเอกสาร → ชำระเงิน → รับเอกสาร"
+        },
+        {
+          "chunk_id": "doc_001_section_2",
+          "section_title": "รายการเอกสาร",
+          "summary": "ต้องใช้ 6 อย่าง"
+        },
+        {
+          "chunk_id": "doc_001_section_3",
+          "section_title": "ค่าธรรมเนียม",
+          "summary": "500-5,000 บาท ขึ้นกับขนาด"
+        }
+      ],
+
+      "hierarchy_magic": "✨ Retrieve Document Root (Level 0) → ดึง children (Level 1) → ได้ภาพรวมทั้งเอกสาร!"
+    },
+
+    "step_3_llm_generation": {
+      "llm_answer": "การโอนที่ดินต้องดำเนินการดังนี้:\n\n**1. หลักเกณฑ์ที่ต้องมี:**\n- ต้องเป็นเจ้าของสิทธิ์\n- ไม่มีภาระจำยอมหรือได้รับยินยอม\n- ชำระภาษีครบถ้วน\n\n**2. ขั้นตอนการดำเนินการ (5 ขั้นตอน):**\n1. จองคิวออนไลน์หรือที่สำนักงาน\n2. ยื่นคำขอพร้อมเอกสาร\n3. ตรวจสอบเอกสาร (30-60 นาที)\n4. ชำระค่าธรรมเนียม\n5. รับเอกสารโอนกรรมสิทธิ์\n\n**3. เอกสารที่ต้องเตรียม (6 อย่าง):**\n- บัตรประชาชน, ทะเบียนบ้าน, โฉนด\n- หนังสือมอบอำนาจ, ใบเสร็จภาษี, หนังสือยินยอม\n\n**4. ค่าใช้จ่าย:**\n- 500-5,000 บาท ขึ้นอยู่กับขนาดที่ดิน\n\nที่มา: คู่มือปชช/1.จดทะเบียนโอน.txt",
+      "why_comprehensive": "ได้ภาพรวมครบทุกส่วน เพราะ Level 0 เชื่อมกับทุก sections!"
+    }
+  },
+
+  "comparison_table": {
+    "title": "📊 เปรียบเทียบ: มี Hierarchy vs ไม่มี",
+    
+    "without_hierarchy": {
+      "method": "Fixed-size 500 tokens",
+      "scenario_1": {
+        "retrieved_chunks": 3,
+        "complete": false,
+        "issue": "ได้แค่ตารางครึ่งหนึ่ง ไม่มีหมายเหตุ"
+      },
+      "scenario_2": {
+        "retrieved_chunks": 5,
+        "complete": false,
+        "issue": "เอกสารไม่ครบ, ค่าธรรมเนียมไม่ครบ"
+      },
+      "scenario_3": {
+        "retrieved_chunks": 10,
+        "complete": false,
+        "issue": "กระจัดกระจาย ต้องประกอบเอง"
+      }
+    },
+
+    "with_hierarchy": {
+      "method": "Section-aware + 3 Levels",
+      "scenario_1": {
+        "retrieved_chunks": 1,
+        "expanded_to": 3,
+        "complete": true,
+        "benefit": "✅ Retrieve 1 → ขยายเป็น 3 (parent + siblings)"
+      },
+      "scenario_2": {
+        "retrieved_chunks": 2,
+        "expanded_to": 6,
+        "complete": true,
+        "benefit": "✅ Retrieve 2 sections → ขยายเป็น 6 chunks (ครบทั้ง 2 หัวข้อ)"
+      },
+      "scenario_3": {
+        "retrieved_chunks": 1,
+        "expanded_to": 5,
+        "complete": true,
+        "benefit": "✅ Retrieve root → ขยายเป็น 5 sections (ภาพรวมครบ)"
+      }
+    }
+  },
+
+  "summary": {
+    "title": "🎯 สรุป: ทำไม Level ถึงสำคัญ",
+    
+    "level_0_root": {
+      "name": "Document Root",
+      "purpose": "ภาพรวมเอกสาร",
+      "use_case": "คำถามคลุมๆ → ขยายเป็น sections → ตอบแบบครอบคลุม"
+    },
+
+    "level_1_sections": {
+      "name": "Section Headers",
+      "purpose": "ภาพรวมแต่ละหัวข้อ",
+      "use_case": "คำถามหลายหัวข้อ → ขยายเป็น content → ตอบครบทุกหัวข้อ"
+    },
+
+    "level_2_content": {
+      "name": "Content Chunks",
+      "purpose": "เนื้อหาละเอียด",
+      "use_case": "คำถามเฉพาะ → ขยายเป็น parent+siblings → ตอบพร้อม context"
+    },
+
+    "magic_formula": {
+      "title": "✨ สูตรมหัศจรรย์",
+      "formula": "Retrieve 1 chunk + Hierarchy → ขยาย Context → ได้หลาย chunks ฟรี!",
+      "result": "ตอบถูก ตอบครบ ตอบได้ source → ระบบเทพ! 🚀"
+    }
+  }
+}

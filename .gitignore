@@ -1,0 +1,86 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# Environment Variables
+.env
+.env.local
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Logs
+*.log
+logs/
+
+# Test Results
+test_results/
+*.txt
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Qdrant Storage
+qdrant_storage/
+
+# Models Cache
+models/
+.cache/
+
+# Temporary Files
+tmp/
+temp/
+*.tmp
+
+# Coverage
+.coverage
+htmlcov/
+
+# Archives (keep structure, not content)
+archive/logs/*.log
+archive/logs/*.txt
+archive/old_tests/*.py
+archive/old_scripts/*.py
+
+# Data (keep structure)
+data/bm25_vocabulary.pkl
+data/chunks/
+
+# Secrets
+*.key
+*.pem
+*.crt
