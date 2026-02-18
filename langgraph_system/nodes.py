@@ -221,6 +221,9 @@ async def retrieval_node(state: ChatState, config: RunnableConfig) -> ChatState:
     """
     logger.info(f"🔍 Retrieval Node - Advanced Search for: {state['query'][:50]}...")
     
+    # Track timing
+    start_time = time.time()
+    
     # Get config from RunnableConfig
     cfg = config.get('configurable', {})
     
@@ -318,6 +321,9 @@ async def retrieval_node(state: ChatState, config: RunnableConfig) -> ChatState:
         
         logger.info(f"✅ Advanced Retrieval: {len(documents)} documents (BM25+Dense+RRF)")
         
+        # Calculate retrieval time
+        retrieval_time = time.time() - start_time
+        
         # Store both retrieved and reranked in state (since Advanced Engine does both)
         state['retrieved_documents'] = documents
         state['reranked_documents'] = documents[:3]  # Top 3 after reranking
@@ -326,11 +332,13 @@ async def retrieval_node(state: ChatState, config: RunnableConfig) -> ChatState:
         state['metadata']['retrieval_method'] = 'hybrid_rrf' if documents else 'none'
         state['metadata']['query_analysis'] = query_analysis_metadata
         state['metadata']['handler'] = 'rag'
+        state['metadata']['retrieval_time_seconds'] = round(retrieval_time, 3)
         
         state['intermediate_steps'].append({
             "step": "advanced_retrieval",
             "method": "BM25 + Dense + RRF + Rerank + Context Expansion",
             "count": len(documents),
+            "time_seconds": round(retrieval_time, 3),
             "top_rerank_score": documents[0].get('rerank_score') if documents else 0,
             "query_analysis": query_analysis_metadata,
             "timestamp": datetime.now().isoformat()
@@ -418,6 +426,9 @@ async def generation_node(state: ChatState, config: RunnableConfig) -> ChatState
     Generates answer using LLM with retrieved context + hierarchical expansion
     """
     logger.info("✨ Generation Node - Generating answer with context expansion...")
+    
+    # Track timing
+    start_time = time.time()
     
     try:
         documents = state.get('reranked_documents', [])
@@ -521,13 +532,18 @@ async def generation_node(state: ChatState, config: RunnableConfig) -> ChatState
         response = await llm.ainvoke(messages)
         answer = response.content
         
+        # Calculate generation time
+        generation_time = time.time() - start_time
+        
         logger.info(f"✅ Generated answer: {len(answer)} characters")
         
         state['generated_answer'] = answer
         state['sources'] = [
             {
-                "title": doc.get('document_title', ''),
-                "section": doc.get('section_title', ''),
+                "title": doc.get('document_title') or doc.get('filename') or 'ไม่ระบุแหล่งที่มา',
+                "section": doc.get('section_title') or 'ข้อมูลทั่วไป',
+                "document_id": doc.get('document_id', ''),
+                "chunk_type": doc.get('chunk_type', ''),
                 "score": doc.get('rerank_score', doc.get('score', 0)),
                 "bm25_score": doc.get('bm25_score'),
                 "dense_score": doc.get('dense_score'),
@@ -537,9 +553,11 @@ async def generation_node(state: ChatState, config: RunnableConfig) -> ChatState
             for doc in documents
         ]
         state['metadata']['handler'] = 'rag'
+        state['metadata']['generation_time_seconds'] = round(generation_time, 3)
         state['intermediate_steps'].append({
             "step": "generation",
             "answer_length": len(answer),
+            "time_seconds": round(generation_time, 3),
             "timestamp": datetime.now().isoformat()
         })
         
