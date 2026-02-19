@@ -1,0 +1,60 @@
+# Production Docker Compose for น้องไอดิน RAG System
+version: '3.8'
+
+services:
+  # Qdrant Vector Database
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant_rag_dol
+    ports:
+      - "6333:6333"  # HTTP API
+      - "6334:6334"  # gRPC API
+    volumes:
+      - ./qdrant_storage:/qdrant/storage
+      - ./qdrant_snapshots:/qdrant/snapshots
+    environment:
+      - QDRANT__SERVICE__HTTP_PORT=6333
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - rag_network
+
+  # FastAPI Application
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+    container_name: idin_api
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./data:/app/data:ro  # Read-only for security
+      - ./logs:/app/logs
+    environment:
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+      - LLM_API_BASE=https://tokenmind.abdul.in.th/v1
+      - LLM_API_KEY=sk-driylW9kC_SdAaHEl3350g
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=INFO
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - rag_network
+    command: uvicorn langgraph_system.api_server_langgraph:app --host 0.0.0.0 --port 8001 --workers 2
+
+networks:
+  rag_network:
+    driver: bridge
