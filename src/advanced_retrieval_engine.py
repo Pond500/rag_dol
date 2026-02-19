@@ -424,7 +424,7 @@ class AdvancedRetrievalEngine:
                 chunk_type=payload.get('chunk_type'),
                 section_title=payload.get('section_title'),
                 hierarchy_level=payload.get('hierarchy_level'),
-                filename=payload.get('file_name'),
+                filename=payload.get('document_type') or payload.get('file_name'),  # Use document_type first
                 filepath=payload.get('file_path'),
                 relative_path=payload.get('relative_path'),
                 document_id=payload.get('document_id'),
@@ -531,7 +531,7 @@ class AdvancedRetrievalEngine:
                     chunk_type=r['payload'].get('chunk_type'),
                     section_title=r['payload'].get('section_title'),
                     hierarchy_level=r['payload'].get('hierarchy_level'),
-                    filename=r['payload'].get('file_name'),
+                    filename=r['payload'].get('document_type') or r['payload'].get('file_name'),
                     filepath=r['payload'].get('file_path'),
                     relative_path=r['payload'].get('relative_path'),
                     document_id=r['payload'].get('document_id'),
