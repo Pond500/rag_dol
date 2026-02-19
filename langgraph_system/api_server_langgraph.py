@@ -7,11 +7,13 @@ sys.path.insert(0, '/Users/pond500/RAG/rag_dol')
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 from typing import Dict, Any, List
 import logging
 import time
+import json
+import asyncio
 from datetime import datetime
 
 from langgraph_system.graph import create_idin_graph
@@ -344,6 +346,140 @@ async def get_history(session_id: str) -> Dict[str, Any]:
             for msg in messages
         ]
     })
+
+
+@app.post("/chat/stream")
+async def chat_stream(request: ChatRequest):
+    """
+    Streaming chat endpoint using Server-Sent Events (SSE)
+    Returns answer character by character for real-time UI updates
+    """
+    start_time = time.time()
+    
+    if langgraph_app is None:
+        raise HTTPException(status_code=503, detail="LangGraph not initialized")
+    
+    async def generate_stream():
+        full_response_text = ""
+        status = "success"
+        decision = "UNKNOWN"
+        source_data = []
+        chunk_data = []
+        
+        try:
+            # Auto-create session if not exists
+            if request.session_id not in sessions:
+                created_at = datetime.now().isoformat()
+                memory = ConversationBufferMemory(max_messages=50)
+                sessions[request.session_id] = {
+                    'session_id': request.session_id,
+                    'memory': memory,
+                    'created_at': created_at,
+                    'last_activity': created_at,
+                }
+                logger.info(f"✨ Auto-created session: {request.session_id}")
+            
+            # Get session and update activity
+            session = sessions[request.session_id]
+            memory = session['memory']
+            session['last_activity'] = datetime.now().isoformat()
+            
+            # Convert memory to chat_history format
+            chat_history = [
+                {
+                    "role": msg.role,
+                    "content": msg.content
+                }
+                for msg in memory.get_messages()
+            ]
+            
+            # Create initial state
+            initial_state = create_initial_state(
+                query=request.query,
+                session_id=request.session_id,
+                chat_history=chat_history
+            )
+            
+            # Send initial status
+            yield f"data: {json.dumps({'type': 'status', 'content': 'Processing query...'}, ensure_ascii=False)}\n\n"
+            
+            # Run LangGraph workflow
+            logger.info(f"🔄 Running LangGraph for streaming query: {request.query[:50]}...")
+            final_state = await langgraph_app.ainvoke(initial_state, config={"configurable": CONFIG})
+            
+            # Extract results
+            answer = final_state.get('generated_answer', 'ไม่สามารถสร้างคำตอบได้')
+            decision = final_state.get('routing_decision', 'UNKNOWN')
+            source_data = final_state.get('sources', [])
+            error = final_state.get('error')
+            
+            # Format chunks data
+            if final_state.get('reranked_documents'):
+                chunk_data = [
+                    {
+                        "rank": doc.get('rank', i + 1),
+                        "text": doc.get('text', '')[:200],
+                        "section_title": doc.get('section_title', ''),
+                        "score": doc.get('rerank_score', doc.get('score', 0)),
+                    }
+                    for i, doc in enumerate(final_state.get('reranked_documents', [])[:3])
+                ]
+            
+            if error:
+                status = "error"
+                full_response_text = f"เกิดข้อผิดพลาด: {error}"
+                yield f"data: {json.dumps({'type': 'error', 'content': full_response_text}, ensure_ascii=False)}\n\n"
+            else:
+                # Send status update
+                yield f"data: {json.dumps({'type': 'status', 'content': 'Generating response...'}, ensure_ascii=False)}\n\n"
+                
+                # Stream answer character by character
+                for char in answer:
+                    full_response_text += char
+                    yield f"data: {json.dumps({'type': 'token', 'content': char}, ensure_ascii=False)}\n\n"
+                    await asyncio.sleep(0.01)  # Small delay for smooth streaming
+                
+                # Save to memory
+                memory.add_message("user", request.query)
+                memory.add_message("assistant", answer)
+            
+        except Exception as e:
+            status = "error"
+            error_msg = f"Stream error: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            yield f"data: {json.dumps({'type': 'error', 'content': error_msg}, ensure_ascii=False)}\n\n"
+        
+        finally:
+            elapsed = time.time() - start_time
+            
+            # Log the request
+            log_data = {
+                "endpoint": "/chat/stream",
+                "session_id": request.session_id,
+                "user_query": request.query,
+                "routing_decision": decision,
+                "response_length": len(full_response_text),
+                "elapsed_time": f"{elapsed:.3f}s",
+                "status": status,
+            }
+            
+            if status == "error":
+                logger.error("Exception in /chat/stream endpoint", exc_info=True, extra=log_data)
+            else:
+                logger.info("Chat stream request processed", extra=log_data)
+            
+            # Send final metadata
+            final_payload = {
+                "type": "final",
+                "decision": decision,
+                "sources": source_data,
+                "chunks": chunk_data,
+                "elapsed_time": f"{elapsed:.3f}s",
+                "status": status
+            }
+            yield f"data: {json.dumps(final_payload, ensure_ascii=False)}\n\n"
+    
+    return StreamingResponse(generate_stream(), media_type="text/event-stream")
 
 
 @app.post("/search", response_class=JSONResponse)
